@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <button id="saveTimestampBtn">Start</button>
+    
+    <hr>
+    
+    <div id="stopwatch">00:00.00</div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check the current saved timestamp on page load
+            updateStopwatch();
+        });
+
+        document.getElementById('saveTimestampBtn').addEventListener('click', function() {
+            fetch('/saveTimestamp')
+                .then(response => response.text())
+                .then(message => {
+                    alert(message);
+                    updateStopwatch();
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        function updateStopwatch() {
+            fetch('/getTimestamp')
+                .then(response => response.json())
+                .then(data => {
+                    const savedTimestamp = new Date(data.timestamp);
+                    startStopwatch(savedTimestamp);
+                })
+                .catch(error => console.error('Error fetching timestamp:', error));
+        }
+
+        function startStopwatch(startTime) {
+            const stopwatchElement = document.getElementById('stopwatch');
+            let elapsedTime = (Date.now() - startTime);
+
+            function updateDisplay() {
+                const minutes = Math.floor(elapsedTime / 60000);
+                const seconds = ((elapsedTime % 60000) / 1000).toFixed(2);
+
+                const formattedTime = `${padZero(minutes)}:${padZero(seconds)}`;
+                stopwatchElement.textContent = formattedTime;
+
+                elapsedTime += 1000;
+            }
+
+            setInterval(updateDisplay, 1000);
+            updateDisplay();
+        }
+
+        function padZero(value) {
+            return value < 10 ? `0${value}` : value;
+        }
+    </script>
+</body>
+</html>

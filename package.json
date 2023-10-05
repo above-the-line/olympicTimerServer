@@ -1,0 +1,23 @@
+{
+  "name": "olympictimerserver",
+  "version": "1.0.0",
+  "description": "express server for olympic timer",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/above-the-line/olympicTimerServer.git"
+  },
+  "author": "Avi Michael",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/above-the-line/olympicTimerServer/issues"
+  },
+  "homepage": "https://github.com/above-the-line/olympicTimerServer#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
