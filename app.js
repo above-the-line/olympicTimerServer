@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
+const utils = require('./utils.js')
 
 const app = express();
 const port = 3000;
@@ -23,9 +24,10 @@ app.get('/saveTimestamp', async (req, res) => {
   }
 });
 
-// Return timestamp
-app.get('/getTimestamp', async (req, res) => {
-  const filePath = path.join(__dirname, 'timestamps.txt');
+
+// Returns duration as a numerical value
+app.get('/getAccumulatedDuration', async (req, res) => {
+  const filePath = path.join(__dirname, 'accumulatedDuration.txt');
 
   try {
     const data = await fs.readFile(filePath, 'utf-8');
@@ -37,6 +39,47 @@ app.get('/getTimestamp', async (req, res) => {
     console.error(err);
     res.status(500).send('Error fetching timestamp from file');
   }
+});
+
+
+// Calculates duration between two UTC timestamps and saves duration to file
+app.get('/saveAccumulatedDuration', async (req, res) => {
+  const timestampNow = new Date().toUTCString();
+  const filePath = path.join(__dirname, 'timestamps.txt');
+  let previousTimestamp;
+
+  try {
+    const data = await fs.readFile(filePath, 'utf-8');
+    const timestamps = data.trim().split('\n');
+    previousTimestamp = timestamps[timestamps.length - 1];
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('Error fetching timestamp from file');
+  }
+
+  const previous = new Date(previousTimestamp);
+  const now = new Date(timestampNow);
+
+  // Calculate the time difference in milliseconds
+  const timeDifference = now - previous;
+
+  const accumulatedDurationFilePath = path.join(__dirname, 'accumulatedDuration.txt');
+
+  try {
+    await fs.appendFile(accumulatedDurationFilePath, timeDifference + '\n');
+    console.log('Timestamp duration:', timeDifference);
+    res.json({ timeDifference });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error saving timestamp to file');
+  }
+});
+
+// Return timestamp
+app.get('/getTimestamp', async (req, res) => {
+  const timestamp = await utils.getLatestTimestamp();
+  console.log(timestamp);
+  res.json({ timestamp });
 });
 
 // Pause button: store the previously accumulated duration to a different file, 

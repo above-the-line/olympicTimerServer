@@ -1,63 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-    <button id="saveTimestampBtn">Start</button>
-    
-    <hr>
-    
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/3.4.3/luxon.min.js"></script>
+  </head>
+  <body>
+    <button id="startBtn">Start</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="resetBtn">Reset</button>
+
+    <hr />
+
     <div id="stopwatch">00:00.00</div>
-    
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check the current saved timestamp on page load
-            updateStopwatch();
+      let startTime;
+      let currentTimeForRender;
+      let isRunning = false;
+      let firstLoadCheck = true;
+
+      document.addEventListener("DOMContentLoaded", async function () {
+        // in milliseconds
+        let existingStartTimeStamp = await getExistingTimeStamp();
+
+        // now in Milliseconds
+        let now = luxon.DateTime.utc().toMillis();
+
+        let accumulatedTime = await getAccumulatedTime();
+
+        // If loading app for first time and no data stored
+        if (
+          existingStartTimeStamp == null ||
+          existingStartTimeStamp == undefined
+        ) {
+          console.log("case #1");
+          startTime = now;
+        }
+
+        // if there is an existing start time loaded but it was never paused
+        if (
+          accumulatedTime < 1 &&
+          firstLoadCheck == true &&
+          existingStartTimeStamp !== null &&
+          existingStartTimeStamp !== undefined &&
+          existingStartTime >= now
+        ) {
+          console.log("case #2");
+          startTime = existingStartTimeStamp;
+          isRunning = true;
+        }
+
+        // if there is an existing accumulation then start paused but set time to that accumulation
+        if (accumulatedTime > 0 && firstLoadCheck == true) {
+          console.log("case #3");
+          isRunning = false;
+          startTime = existingStartTimeStamp;
+        }
+
+        firstLoadCheck = false;
+
+        console.log(`existingStartTimeStamp: ${existingStartTimeStamp}`);
+        console.log(`isRunning: ${isRunning}`);
+        console.log(`startTime: ${startTime}`);
+
+        const startBtn = document.getElementById("startBtn");
+        const pauseBtn = document.getElementById("pauseBtn");
+        const resetBtn = document.getElementById("resetBtn");
+
+        startBtn.addEventListener("click", startStopwatch);
+        pauseBtn.addEventListener("click", pauseStopwatch);
+        resetBtn.addEventListener("click", resetStopwatch);
+
+        updateDisplay();
+      });
+
+      function getAccumulatedTime() {
+        return new Promise((resolve, reject) => {
+          fetch("/getAccumulatedDuration")
+            .then((response) => response.json())
+            .then((data) => {
+              resolve(data.timestamp);
+            })
+            .catch((error) => {
+              console.error("Error fetching existing duration:", error);
+              reject(error);
+            });
         });
+      }
 
-        document.getElementById('saveTimestampBtn').addEventListener('click', function() {
-            fetch('/saveTimestamp')
-                .then(response => response.text())
-                .then(message => {
-                    alert(message);
-                    updateStopwatch();
-                })
-                .catch(error => console.error('Error:', error));
+      //   returns milliseconds since 1970 epoch
+      function getExistingTimeStamp() {
+        return new Promise((resolve, reject) => {
+          fetch("/getTimeStamp")
+            .then((response) => response.json())
+            .then((data) => {
+              let dateTimeStampString = data.timestamp;
+              let timeStamp = luxon.DateTime.fromHTTP(dateTimeStampString).ts;
+              resolve(timeStamp);
+            })
+            .catch((error) => {
+              console.error("Error fetching existing start timestamp:", error);
+              reject(error);
+            });
         });
+      }
 
-        function updateStopwatch() {
-            fetch('/getTimestamp')
-                .then(response => response.json())
-                .then(data => {
-                    const savedTimestamp = new Date(data.timestamp);
-                    startStopwatch(savedTimestamp);
-                })
-                .catch(error => console.error('Error fetching timestamp:', error));
+      function startStopwatch() {
+        if (!isRunning) {
+          isRunning = true;
+          updateDisplay();
+
+          setInterval(updateDisplay, 1);
         }
+      }
 
-        function startStopwatch(startTime) {
-            const stopwatchElement = document.getElementById('stopwatch');
-            let elapsedTime = (Date.now() - startTime);
+      function updateDisplay() {
+        const elapsedTime = startTime;
+        const minutes = Math.floor(elapsedTime / 60000);
+        const seconds = Math.floor((elapsedTime % 60000) / 1000);
+        const milliseconds = elapsedTime % 1000;
 
-            function updateDisplay() {
-                const minutes = Math.floor(elapsedTime / 60000);
-                const seconds = ((elapsedTime % 60000) / 1000).toFixed(2);
+        const formattedTime = `${padZero(minutes)}:${padZero(
+          seconds
+        )}.${padZeroMilliseconds(milliseconds)}`;
+        document.getElementById("stopwatch").textContent = formattedTime;
+      }
 
-                const formattedTime = `${padZero(minutes)}:${padZero(seconds)}`;
-                stopwatchElement.textContent = formattedTime;
+      function startStopwatch() {
+        if (!isRunning) {
+          let currentTime = (isRunning = true);
+          updateDisplay();
 
-                elapsedTime += 1000;
-            }
-
-            setInterval(updateDisplay, 1000);
-            updateDisplay();
+          setInterval(updateDisplay, 1);
         }
+      }
 
-        function padZero(value) {
-            return value < 10 ? `0${value}` : value;
-        }
+      function padZero(value) {
+        return value < 10 ? `0${value}` : value;
+      }
+
+      function padZeroMilliseconds(value) {
+        return value < 10 ? `00${value}` : value < 100 ? `0${value}` : value;
+      }
+
+      function pauseStopwatch() {
+        isRunning = false;
+      }
+
+      function resetStopwatch() {
+        isRunning = false;
+        accumulatedTime = 0;
+        startTime = Date.now();
+        updateDisplay();
+      }
     </script>
-</body>
+  </body>
 </html>
