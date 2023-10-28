@@ -39,6 +39,7 @@ app.post("/saveTimestamp", async (req, res) => {
 // Returns duration as a numerical value
 app.get("/getAccumulatedDuration", async (req, res) => {
   const filePath = path.join(__dirname, "accumulatedDuration.txt");
+  console.log("getAccumulatedDuration fired");
 
   try {
     const data = await fs.readFile(filePath, "utf-8");
@@ -52,36 +53,18 @@ app.get("/getAccumulatedDuration", async (req, res) => {
   }
 });
 
-// Calculates duration between two UTC timestamps and saves duration to file
-app.get("/saveAccumulatedDuration", async (req, res) => {
-  const timestampNow = new Date().toUTCString();
-  const filePath = path.join(__dirname, "timestamps.txt");
-  let previousTimestamp;
-
-  try {
-    const data = await fs.readFile(filePath, "utf-8");
-    const timestamps = data.trim().split("\n");
-    previousTimestamp = timestamps[timestamps.length - 1];
-  } catch (err) {
-    console.error(err);
-    return res.status(500).send("Error fetching timestamp from file");
-  }
-
-  const previous = new Date(previousTimestamp);
-  const now = new Date(timestampNow);
-
-  // Calculate the time difference in milliseconds
-  const timeDifference = now - previous;
-
+// Saves elapsed duration (a string of UTC miliseconds) to file
+app.post("/saveAccumulatedDuration", async (req, res) => {
+  const providedTimestamp = req.body.timestamp;
   const accumulatedDurationFilePath = path.join(
     __dirname,
     "accumulatedDuration.txt"
   );
 
   try {
-    await fs.appendFile(accumulatedDurationFilePath, timeDifference + "\n");
-    console.log("Timestamp duration:", timeDifference);
-    res.json({ timeDifference });
+    await fs.appendFile(accumulatedDurationFilePath, providedTimestamp + "\n");
+    console.log("Saved elapsed duration:", providedTimestamp);
+    res.json({ providedTimestamp });
   } catch (err) {
     console.error(err);
     res.status(500).send("Error saving timestamp to file");
